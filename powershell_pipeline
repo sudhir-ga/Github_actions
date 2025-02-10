@@ -1,0 +1,30 @@
+name: Remote Windows Server Deployment with Rollback
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # Using Ubuntu runner with WinRM for remote execution
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install WinRM on Runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y winrm python3-pip
+          pip3 install pywinrm
+
+      - name: Deploy to Remote Windows Server with Rollback
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.REMOTE_SERVER_IP }}
+          username: ${{ secrets.REMOTE_SERVER_USER }}
+          password: ${{ secrets.REMOTE_SERVER_PASS }}
+          script: |
+            mkdir C:\temp\deploy
+            Copy-Item -Path "${{ github.workspace }}\*" -Destination "C:\temp\deploy" -Recurse -Force
+            powershell.exe -ExecutionPolicy Bypass -File C:\temp\deploy\deploy.ps1 -RepoPath "C:\temp\deploy" -DestinationPath "C:\Deployments\MyApp" -BackupPath "C:\Backup\MyApp"
